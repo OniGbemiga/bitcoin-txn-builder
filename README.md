@@ -1,4 +1,4 @@
-# simple-bitcoin-wallet
+# simple-bitcoin-transaction-builder
 
 ## Prerequisites
 * Have an understanding of bitcoin
