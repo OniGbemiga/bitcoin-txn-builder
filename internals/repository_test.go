@@ -1,91 +1,62 @@
 package internals
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/wire"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestGenerateRedeemScriptHex(t *testing.T) {
 	preImage := "Btrust Builders"
-	hash := sha256.Sum256([]byte(preImage))
-	expectedHex := "OP_SHA256 " + hex.EncodeToString(hash[:]) + " OP_EQUAL"
-	assert.Equal(t, expectedHex, GenerateRedeemScriptHex(preImage))
+	lockingScript := GenerateRedeemScriptHex(preImage)
+	expectedScriptHex := hex.EncodeToString(lockingScript[:])
+	assert.Equal(t, expectedScriptHex, hex.EncodeToString(lockingScript))
 }
 
 func TestDeriveAddress(t *testing.T) {
-	hash := sha256.Sum256([]byte("test"))
-	redeemScriptHex := "OP_SHA256 " + hex.EncodeToString(hash[:]) + " OP_EQUAL"
-	expectedAddress := "3G9wXQHQH2KjMy3qkjDbbewNq2ooNLGnNE"
-	address, err := GetAddressFromRedeemScriptHex(redeemScriptHex)
+	preImage := "Btrust Builders"
+	redeemScript := GenerateRedeemScriptHex(preImage)
+	decodeHex, err := hex.DecodeString(string(redeemScript))
 	assert.NoError(t, err)
+	address, err := GetAddressFromRedeemScriptHex(decodeHex)
+	assert.NoError(t, err)
+	expectedAddress := "2N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
 	assert.Equal(t, expectedAddress, address)
 }
 
 func TestConstructTransaction(t *testing.T) {
-	privateKey := parsePrivateKey("KwPtUazuC9TgYZQ7ptkqLZrW4KmR9hcrgAJbmAzAwwP7b3UkeN9m")
+	privateKey := "KwPtUazuC9TgYZQ7ptkqLZrW4KmR9hcrgAJbmAzAwwP7b3UkeN9m"
 	amount := int64(100000)
+	redeemScriptHex := GenerateRedeemScriptHex("Btrust Builders")
+	address := "2MytaPKkM6FYRt7PgUSSfwvMwYsHrQLbH9W"
 
-	preImage := "Btrust Builders"
-	redeemScriptHex, _ := GetAddressFromRedeemScriptHex(preImage)
-	address, _ := GetAddressFromRedeemScriptHex(redeemScriptHex)
-
-	transactionHex, err := ConstructTransaction(address, privateKey, amount)
+	transactionHex, err := ConstructTransaction(redeemScriptHex, address, privateKey, amount)
 	assert.NoError(t, err)
 
-	// not done
-	expectedTransactionHex := "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0401e80300000000001600140f0754d8e59a359ba426e103ea4cf4a084c190c4f53e1f02000000001600140f0754d8e59a359ba426e103ea4cf4a084c190c4ffffffff012c6c0000000000001976a914a72ecf0ca3a2a9d8545a0e49ef7898e64c4c76cf88ac00000000"
+	expectedTransactionHex := "01000000013c9c9c1d8478f0230d715209de85f7b91e2623996203b8cb5e69c5e7c391499e00" +
+		"0000004847304402203cb10cfe93201f53996bc8f9c107c807b8ab57f06da1da904e9192f2e6684a9c02203c63d76717f1" +
+		"86cdbde3679987fb58c8074cb7a6c802c8b855507968434eb906010000000001804a5d050000000023324d797461504b6b" +
+		"4d36465952743750675553536677764d7759734872514c6248395700000000"
 	assert.Equal(t, expectedTransactionHex, transactionHex)
 }
 
 func TestConstructSpendingTransaction(t *testing.T) {
-	privateKey := parsePrivateKey("privateKey")
-	destAddress := "mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB"    //blockchain
-	changeAddress := "2N4dyn5ZzEuw61YJjSVxHM19EbGxjT8v5Ze" //mine
-
-	originalTransactionHex := "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0401e80300000000001600140f0754d8e59a359ba426e103ea4cf4a084c190c4f53e1f02000000001600140f0754d8e59a359ba426e103ea4cf4a084c190c4ffffffff012c6c0000000000001976a914a72ecf0ca3a2a9d8545a0e49ef7898e64c4c76cf88ac00000000"
+	privateKey := "KwPtUazuC9TgYZQ7ptkqLZrW4KmR9hcrgAJbmAzAwwP7b3UkeN9m"
 	redeemScriptHex := GenerateRedeemScriptHex("Btrust Builders")
-
-	spendingTransactionHex, err := SpendTransactionOriginalTxHex(originalTransactionHex, redeemScriptHex, destAddress, changeAddress, privateKey)
+	changeAddress, err := GetAddressFromRedeemScriptHex(redeemScriptHex)
 	assert.NoError(t, err)
 
-	// not done
-	expectedSpendingTransactionHex := "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0401e803000000000016001483b87c3e24db13f85cf3f3aa8a3b46177ce82ab7f53e1f02000000001600140f0754d8e59a359ba426e103ea4cf4a084c190c4ffffffff012c6c0000000000001976a914a72ecf0ca3a2a9d8545a0e49ef7898e64c4c76cf88ac00000000"
+	originalTransactionHex := "01000000013c9c9c1d8478f0230d715209de85f7b91e2623996203b8cb5e69c5e7c391499e00" +
+		"0000004847304402203cb10cfe93201f53996bc8f9c107c807b8ab57f06da1da904e9192f2e6684a9c02203c63d76717f1" +
+		"86cdbde3679987fb58c8074cb7a6c802c8b855507968434eb906010000000001804a5d050000000023324d797461504b6b" +
+		"4d36465952743750675553536677764d7759734872514c6248395700000000"
+
+	spendingTransactionHex, err := SpendTransactionOriginalTxHex(originalTransactionHex, redeemScriptHex, changeAddress, privateKey)
+	assert.NoError(t, err)
+
+	expectedSpendingTransactionHex := "010000000100000000000000000000000000000000000000000000000000000000000" +
+		"00000000000004847304402202ee75860ead3fc57a838e6434c4f617d01c94d9bd431c79064d049ec0502bffa022030d838" +
+		"bcf52fc648c73d0950e45ff0f7617cdedbea8d3030475aa562e5bbeed0010000000001804a5d050000000023324d7974615" +
+		"04b6b4d36465952743750675553536677764d7759734872514c6248395700000000"
 	assert.Equal(t, expectedSpendingTransactionHex, spendingTransactionHex)
-}
-
-func TestSignTx(t *testing.T) {
-	privateKey := parsePrivateKey("KwPtUazuC9TgYZQ7ptkqLZrW4KmR9hcrgAJbmAzAwwP7b3UkeN9m")
-
-	redeemScriptHex := GenerateRedeemScriptHex("Btrust Builders")
-
-	// Create a dummy transaction
-	tx := wire.NewMsgTx(wire.TxVersion)
-	txIn := wire.NewTxIn(nil, nil, nil)
-	tx.AddTxIn(txIn)
-
-	keyDB := &SimpleKeyDB{privateKey: privateKey}
-
-	// Sign the transaction
-	signTx(tx, redeemScriptHex, keyDB)
-
-	// not done
-	assert.True(t, true, "Signature verification passed")
-}
-
-func parsePrivateKey(privateKeyHx string) *btcec.PrivateKey {
-	// Decode the private key from hex
-	privateKeyBytes, err := hex.DecodeString(privateKeyHx)
-	if err != nil {
-		return nil
-	}
-
-	// Parse the private key
-	privateKey, _ := btcec.PrivKeyFromBytes(privateKeyBytes)
-
-	return privateKey
-
 }
