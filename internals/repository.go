@@ -2,7 +2,6 @@ package internals
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
@@ -14,11 +13,10 @@ import (
 )
 
 type TxnBuilderRepository interface {
-	GenerateRedeemScriptHex(preImage string) string
-	GetAddressFromRedeemScriptHex(redeemScriptHex string) (string, error)
-	ConstructTransaction(redeemScriptHex string, address string, privateKey *ecdsa.PrivateKey, amount int64) (string, error)
-	SpendTransactionOriginalTxHex(txHex string, redeemScriptHex string, destAddress string,
-		changeAddress string, privateKey *ecdsa.PrivateKey) (string, error)
+	GenerateRedeemScriptHex(preImage string) []byte
+	GetAddressFromRedeemScriptHex(redeemScriptHex []byte) (string, error)
+	ConstructTransaction(redeemScriptHex []byte, address string, privateKey string, amount int64) (string, error)
+	SpendTransactionOriginalTxHex(txnHex string, redeemScriptHex []byte, changeAddress, privateKey string) (string, error)
 }
 
 func GenerateRedeemScriptHex(preImage string) []byte {
